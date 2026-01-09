@@ -47,3 +47,11 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# Original files
+*.csv
+*.zip
+
+# Database
+*.duckdb
+*.wal
