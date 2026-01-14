@@ -12,10 +12,7 @@ library(fs)
 con <- dbConnect(duckdb(), "db_adaptasaude.duckdb")
 
 # Table
-tb_obs <- tbl(con, "obs")
-
-# OCS indicators codes
-cods <- c("to0043", "to0011", "to0012")
+tb_ibge <- tbl(con, "ibge")
 
 # UFs codes
 ufs <- tibble(
@@ -80,40 +77,9 @@ ufs <- tibble(
 )
 
 # Collect data
-res <- tb_obs |>
-  filter(codind6 %in% cods) |>
-  mutate(
-    code_uf = substr(as.character(codmun), 0, 2),
-    mes = as.numeric(substr(codind, 9, 10)),
-    codind = substr(codind, 0, 6),
-    valor = round(valor, digits = 2)
-  ) |>
-  select(
-    code_ind = codind,
-    code_uf,
-    code_muni = codmun,
-    ano = anos,
-    mes,
-    valor
-  ) |>
-  arrange(code_ind, code_uf, code_muni, ano, mes) |>
-  collect()
-
-# Database disconnect
-dbDisconnect(conn = con)
-
-# Yearly data
-ocs_anual <- res |>
-  filter(mes == 0) |>
-  select(-mes) |>
+res <- tb_ibge |>
   group_by(code_uf) |>
-  group_split()
-
-# Monthly data
-ocs_mensal <- res |>
-  filter(mes != 0) |>
-  select(-mes) |>
-  group_by(code_uf) |>
+  collect() |>
   group_split()
 
 # Export data
@@ -128,15 +94,8 @@ write_csv2_mod <- function(x, dir, prefix) {
 }
 
 map(
-  .x = ocs_anual,
+  .x = res,
   .f = write_csv2_mod,
-  dir = "export/ambiental_anual",
-  prefix = "ambiental_anual_"
-)
-
-map(
-  .x = ocs_mensal,
-  .f = write_csv2_mod,
-  dir = "export/ambiental_mensal",
-  prefix = "ambiental_mensal_"
+  dir = "export/ibge",
+  prefix = "ibge_"
 )

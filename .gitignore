@@ -55,6 +55,8 @@ rsconnect/
 # Database
 *.duckdb
 *.wal
+*.rds
+*.csv
 
 # Lock files
 .~lock*
