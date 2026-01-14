@@ -99,6 +99,9 @@ res <- tb_obs |>
   arrange(code_ind, code_uf, code_muni, ano, mes) |>
   collect()
 
+# Database disconnect
+dbDisconnect(conn = con)
+
 # Yearly data
 ocs_anual <- res |>
   filter(mes == 0) |>
