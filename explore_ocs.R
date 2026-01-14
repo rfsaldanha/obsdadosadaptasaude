@@ -13,8 +13,8 @@ tb_obs <- tbl(con, "obs")
 
 # Explore
 tb_obs |>
-  arrange(-valor) |>
-  head(n = 10) |>
+  # arrange(-valor) |>
+  head(n = 100) |>
   collect()
 
 # Cobertura vegetal e uso da terra
