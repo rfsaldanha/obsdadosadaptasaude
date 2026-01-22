@@ -1,0 +1,332 @@
+---
+title: "Exemplo de análise"
+format:
+  html:
+    embed-resources: true
+---
+
+## Introdução
+
+## Pacotes do R necessários
+
+```{r}
+#| message: false
+library(readr) # Leitura de arquivos CSV
+library(dplyr) # Manipulação de dados
+library(glue) # Manipulação de texto
+library(lubridate) # Conversão de datas
+library(ggplot2) # Gráficos
+library(gghighlight) # Destaque em gráficos
+```
+
+## Leitura dos arquivos de dados
+
+### Definição do município
+
+Defina abaixo a sigla do seu estado, o código do seu município e nome. Uma tabela de códigos de municípios pode ser encontrada [aqui](# https://rfsaldanha.github.io/sis/codmun.html).
+
+```{r}
+sigla_estado <- "CE"
+cod_mun <- 2302602
+nome_mun = "Camocim, CE"
+```
+
+### Dados de clima
+
+```{r}
+#| message: false
+# Temperatura máxima
+temp_max <- read_csv2(
+  file = glue("export/clima/tmax/tmax_{tolower(sigla_estado)}.csv")
+) |>
+  filter(code_muni == cod_mun)
+
+# Normal climatológica da temperatura máxima
+temp_max_normal <- read_csv2(
+  file = glue(
+    "export/clima/tmax_normal/tmax_normal_{tolower(sigla_estado)}.csv"
+  )
+) |>
+  filter(code_muni == cod_mun)
+
+# Temperatura mínima
+temp_min <- read_csv2(
+  file = glue("export/clima/tmin/tmin_{tolower(sigla_estado)}.csv")
+) |>
+  filter(code_muni == cod_mun)
+
+# Normal climatológica da temperatura mínima
+temp_min_normal <- read_csv2(
+  file = glue(
+    "export/clima/tmin_normal/tmin_normal_{tolower(sigla_estado)}.csv"
+  )
+) |>
+  filter(code_muni == cod_mun)
+
+# Precipitação
+prec <- read_csv2(
+  file = glue("export/clima/prec/prec_{tolower(sigla_estado)}.csv")
+) |>
+  filter(code_muni == cod_mun)
+
+# Normal climatológica da precipitação
+prec_normal <- read_csv2(
+  file = glue(
+    "export/clima/prec_normal/prec_normal_{tolower(sigla_estado)}.csv"
+  )
+) |>
+  filter(code_muni == cod_mun)
+
+# Umidade relativa
+rh <- read_csv2(
+  file = glue("export/clima/rh/rh_{tolower(sigla_estado)}.csv")
+) |>
+  filter(code_muni == cod_mun)
+
+# Normal climatológica da umidade relativa
+rh_normal <- read_csv2(
+  file = glue(
+    "export/clima/rh_normal/rh_normal_{tolower(sigla_estado)}.csv"
+  )
+) |>
+  filter(code_muni == cod_mun)
+```
+
+### Dados ambientais
+
+```{r}
+ambiental <- read_csv2(
+  file = glue(
+    "export/ambiental_mensal/ambiental_mensal_{tolower(sigla_estado)}.csv"
+  )
+) |>
+  filter(code_muni == substr(cod_mun, 0, 6))
+```
+
+### Dados IBGE
+
+```{r}
+ibge <- read_csv2(
+  file = glue(
+    "export/ibge/ibge_{tolower(sigla_estado)}.csv"
+  )
+) |>
+  filter(code_muni == substr(cod_mun, 0, 6))
+```
+
+### Dados Proadess
+
+```{r}
+proadess <- read_csv2(
+  file = glue(
+    "export/proadess/proadess_{tolower(sigla_estado)}.csv"
+  )
+) |>
+  filter(code_muni == substr(cod_mun, 0, 6))
+```
+
+## Dimensão climática
+
+```{r}
+#| message: false
+temp_max |>
+  mutate(
+    mes = month(mes, label = TRUE, abbr = TRUE)
+  ) |>
+  ggplot(aes(x = mes, y = valor, group = ano)) +
+  geom_line(color = "red") +
+  gghighlight(ano == 2024, use_group_by = FALSE) +
+  theme_bw() +
+  labs(
+    title = "Médias das temperaturas máximas desde 1950",
+    y = "Graus celsius",
+    subtitle = nome_mun
+  )
+```
+
+```{r}
+#| message: false
+temp_min |>
+  mutate(
+    mes = month(mes, label = TRUE, abbr = TRUE)
+  ) |>
+  ggplot(aes(x = mes, y = valor, group = ano)) +
+  geom_line(color = "blue") +
+  gghighlight(ano == 2024, use_group_by = FALSE) +
+  theme_bw() +
+  labs(
+    title = "Médias das temperaturas mínimas desde 1950",
+    y = "Graus celsius",
+    subtitle = nome_mun
+  )
+```
+
+```{r}
+#| message: false
+rh |>
+  mutate(
+    mes = month(mes, label = TRUE, abbr = TRUE)
+  ) |>
+  ggplot(aes(x = mes, y = valor, group = ano)) +
+  geom_line(color = "coral4") +
+  gghighlight(ano == 2024, use_group_by = FALSE) +
+  theme_bw() +
+  labs(
+    title = "Média da umidade relativa desde 1950",
+    subtitle = nome_mun,
+    y = "%"
+  )
+```
+
+```{r}
+#| message: false
+prec |>
+  mutate(
+    mes = month(mes, label = TRUE, abbr = TRUE)
+  ) |>
+  ggplot(aes(x = mes, y = valor, group = ano)) +
+  geom_line(color = "darkblue") +
+  gghighlight(ano == 2024, use_group_by = FALSE) +
+  theme_bw() +
+  labs(
+    title = "Média da precipitação desde 1950",
+    subtitle = nome_mun,
+    y = "mm"
+  )
+```
+
+## Dimensão ambiental
+
+```{r}
+ambiental |>
+  filter(code_ind == "to0043") |>
+  mutate(
+    mes = month(mes, label = TRUE, abbr = TRUE)
+  ) |>
+  ggplot(aes(x = mes, y = valor, group = ano)) +
+  geom_line(color = "darkblue") +
+  gghighlight(ano == 2024, use_group_by = FALSE) +
+  theme_bw() +
+  ylim(0, 1) +
+  labs(
+    title = "Índice de estado da vegetação (NDVI) médio",
+    subtitle = nome_mun,
+    y = "NDVI"
+  )
+```
+
+```{r}
+ambiental |>
+  filter(code_ind == "to0011") |>
+  mutate(
+    mes = month(mes, label = TRUE, abbr = TRUE)
+  ) |>
+  ggplot(aes(x = mes, y = valor, group = ano)) +
+  geom_line(color = "darkblue") +
+  gghighlight(ano == 2024, use_group_by = FALSE) +
+  theme_bw() +
+  labs(
+    title = "Concentração média de material particulado fino na atmosfera",
+    subtitle = nome_mun,
+    y = "Concentração"
+  )
+```
+
+```{r}
+ambiental |>
+  filter(code_ind == "to0012") |>
+  mutate(
+    mes = month(mes, label = TRUE, abbr = TRUE)
+  ) |>
+  ggplot(aes(x = mes, y = valor, group = ano)) +
+  geom_line(color = "darkblue") +
+  gghighlight(ano == 2024, use_group_by = FALSE) +
+  theme_bw() +
+  labs(
+    title = "Concentração média de monóxido de carbono na atmosfera",
+    subtitle = nome_mun,
+    y = "Concentração"
+  )
+```
+
+### Dimensão SUS
+
+```{r}
+proadess |>
+  filter(code_indi == "proadess001") |>
+  ggplot(aes(x = as.character(ano), y = valor)) +
+  geom_bar(fill = "darkblue", stat = "identity") +
+  # gghighlight(ano == 2024, use_group_by = FALSE) +
+  theme_bw() +
+  coord_flip() +
+  labs(
+    title = "Número de enfermeiros, por 100 mil habitantes",
+    subtitle = nome_mun,
+    y = "Contagem",
+    x = "Ano"
+  )
+```
+
+```{r}
+proadess |>
+  filter(code_indi == "proadess002") |>
+  ggplot(aes(x = as.character(ano), y = valor)) +
+  geom_bar(fill = "darkblue", stat = "identity") +
+  # gghighlight(ano == 2024, use_group_by = FALSE) +
+  theme_bw() +
+  coord_flip() +
+  labs(
+    title = "Número de médicos, por 1.000 habitantes",
+    subtitle = nome_mun,
+    y = "Contagem",
+    x = "Ano"
+  )
+```
+
+```{r}
+proadess |>
+  filter(code_indi == "proadess003") |>
+  ggplot(aes(x = as.character(ano), y = valor)) +
+  geom_bar(fill = "darkblue", stat = "identity") +
+  # gghighlight(ano == 2024, use_group_by = FALSE) +
+  theme_bw() +
+  coord_flip() +
+  labs(
+    title = "Número de leitos hospitalares\n(excluídos os psiquiátricos), por 1.000 habitantes",
+    subtitle = nome_mun,
+    y = "Contagem",
+    x = "Ano"
+  )
+```
+
+```{r}
+proadess |>
+  filter(code_indi == "proadess005") |>
+  ggplot(aes(x = as.character(ano), y = valor)) +
+  geom_bar(fill = "darkblue", stat = "identity") +
+  # gghighlight(ano == 2024, use_group_by = FALSE) +
+  theme_bw() +
+  coord_flip() +
+  labs(
+    title = "Densidade demográfica",
+    subtitle = nome_mun,
+    y = "Contagem",
+    x = "Ano"
+  )
+```
+
+```{r}
+proadess |>
+  filter(code_indi == "proadess006") |>
+  ggplot(aes(x = as.character(ano), y = valor)) +
+  geom_bar(fill = "darkblue", stat = "identity") +
+  # gghighlight(ano == 2024, use_group_by = FALSE) +
+  theme_bw() +
+  coord_flip() +
+  labs(
+    title = "Percentual de internações por Condições Sensíveis à Atenção Primária",
+    subtitle = nome_mun,
+    y = "Contagem",
+    x = "Ano"
+  )
+```
