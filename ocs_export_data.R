@@ -112,7 +112,6 @@ ocs_anual <- res |>
 # Monthly data
 ocs_mensal <- res |>
   filter(mes != 0) |>
-  select(-mes) |>
   group_by(code_uf) |>
   group_split()
 
