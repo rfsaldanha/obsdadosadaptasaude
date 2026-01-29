@@ -26,9 +26,9 @@ library(gghighlight) # Destaque em gráficos
 Defina abaixo a sigla do seu estado, o código do seu município e nome. Uma tabela de códigos de municípios pode ser encontrada [aqui](# https://rfsaldanha.github.io/sis/codmun.html).
 
 ```{r}
-sigla_estado <- "PA"
-cod_mun <- 1502103
-nome_mun = "Cametá, PA"
+sigla_estado <- "RJ"
+cod_mun <- 3303401
+nome_mun = "Nova Friburgo, RJ"
 ```
 
 ### Dados de clima
