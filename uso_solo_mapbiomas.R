@@ -1,4 +1,5 @@
 # Packages
+library(readr)
 library(dplyr)
 library(lubridate)
 library(readxl)
@@ -60,4 +61,7 @@ raw |>
   ) |>
   mutate(code_muni = as.integer(code_muni)) |>
   select(cod_ibge = code_muni, ano, classe, percentual = valor) |>
-  View()
+  write_csv("uso_solo_mapbiomas.csv")
+
+zip(zipfile = "uso_solo_mapbiomas.csv.zip", files = "uso_solo_mapbiomas.csv")
+unlink("uso_solo_mapbiomas.csv")
