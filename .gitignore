@@ -61,3 +61,6 @@ rsconnect/
 # Lock files
 .~lock*
 .DS_Store
+
+# Data folder
+dados_brutos/
