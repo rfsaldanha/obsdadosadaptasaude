@@ -12,9 +12,10 @@ library(stringr)
 library(zendown)
 library(arrow)
 library(climindi)
+library(glue)
+library(zip)
 
-# Database connection
-con <- dbConnect(duckdb(), "db_adaptasaude.duckdb")
+date_start <- ymd("2000-01-01")
 
 # Datasets
 temp_max <- open_dataset(
@@ -25,6 +26,7 @@ temp_max <- open_dataset(
   )
 ) |>
   filter(name == "2m_temperature_max_mean") |>
+  filter(date >= date_start) |>
   mutate(value = value - 273.15) |>
   select(-name) |>
   arrange(code_muni, date) |>
@@ -34,7 +36,13 @@ temp_max <- open_dataset(
   ) |>
   collect() |>
   group_by(code_muni, year, month) |>
-  summarise(temp_max = round(mean(value, na.rm = TRUE), 2))
+  summarise(temp_max = round(mean(value, na.rm = TRUE), 2)) |>
+  ungroup() |>
+  rename(cod_ibge = code_muni) |>
+  mutate(data = ymd(glue("{year}-{month}-1"))) |>
+  mutate(ano = year) |>
+  mutate(mes = month) |>
+  select(cod_ibge, data, ano, mes, temp_max)
 
 temp_min <- open_dataset(
   sources = c(
@@ -44,6 +52,7 @@ temp_min <- open_dataset(
   )
 ) |>
   filter(name == "2m_temperature_min_mean") |>
+  filter(date >= date_start) |>
   mutate(value = value - 273.15) |>
   select(-name) |>
   arrange(code_muni, date) |>
@@ -53,7 +62,13 @@ temp_min <- open_dataset(
   ) |>
   collect() |>
   group_by(code_muni, year, month) |>
-  summarise(temp_min = round(mean(value, na.rm = TRUE), 2))
+  summarise(temp_min = round(mean(value, na.rm = TRUE), 2)) |>
+  ungroup() |>
+  rename(cod_ibge = code_muni) |>
+  mutate(data = ymd(glue("{year}-{month}-1"))) |>
+  mutate(ano = year) |>
+  mutate(mes = month) |>
+  select(cod_ibge, data, ano, mes, temp_min)
 
 temp_mean <- open_dataset(
   sources = c(
@@ -63,6 +78,7 @@ temp_mean <- open_dataset(
   )
 ) |>
   filter(name == "2m_temperature_mean_mean") |>
+  filter(date >= date_start) |>
   mutate(value = value - 273.15) |>
   select(-name) |>
   arrange(code_muni, date) |>
@@ -72,7 +88,13 @@ temp_mean <- open_dataset(
   ) |>
   collect() |>
   group_by(code_muni, year, month) |>
-  summarise(temp_mean = round(mean(value, na.rm = TRUE), 2))
+  summarise(temp_media = round(mean(value, na.rm = TRUE), 2)) |>
+  ungroup() |>
+  rename(cod_ibge = code_muni) |>
+  mutate(data = ymd(glue("{year}-{month}-1"))) |>
+  mutate(ano = year) |>
+  mutate(mes = month) |>
+  select(cod_ibge, data, ano, mes, temp_media)
 
 
 prec <- open_dataset(
@@ -83,6 +105,7 @@ prec <- open_dataset(
   )
 ) |>
   filter(name == "total_precipitation_sum_mean") |>
+  filter(date >= date_start) |>
   mutate(value = value * 1000) |>
   select(-name) |>
   arrange(code_muni, date) |>
@@ -92,17 +115,24 @@ prec <- open_dataset(
   ) |>
   collect() |>
   group_by(code_muni, year, month) |>
-  summarise(prec = round(mean(value, na.rm = TRUE), 2))
+  summarise(precip_mm = round(mean(value, na.rm = TRUE), 2)) |>
+  ungroup() |>
+  rename(cod_ibge = code_muni) |>
+  mutate(data = ymd(glue("{year}-{month}-1"))) |>
+  mutate(ano = year) |>
+  mutate(mes = month) |>
+  select(cod_ibge, data, ano, mes, precip_mm)
 
 rh <- open_dataset(
   sources = c(
-    zen_file(18392587, "rh_mean_mean_2022_1950.parquet"),
-    zen_file(18392587, "rh_mean_mean_2023.parquet"),
-    zen_file(18392587, "rh_mean_mean_2024.parquet"),
-    zen_file(18392587, "rh_mean_mean_2025.parquet")
+    zen_file(18758355, "rh_mean_mean_1950_2022.parquet"),
+    zen_file(18758355, "rh_mean_mean_2023.parquet"),
+    zen_file(18758355, "rh_mean_mean_2024.parquet"),
+    zen_file(18758355, "rh_mean_mean_2025.parquet")
   )
 ) |>
   filter(name == "rh_mean_mean") |>
+  filter(date >= date_start) |>
   select(-name) |>
   arrange(code_muni, date) |>
   mutate(
@@ -111,26 +141,35 @@ rh <- open_dataset(
   ) |>
   collect() |>
   group_by(code_muni, year, month) |>
-  summarise(rh = round(mean(value, na.rm = TRUE), 2))
+  summarise(umidade_rel = round(mean(value, na.rm = TRUE), 2)) |>
+  ungroup() |>
+  rename(cod_ibge = code_muni) |>
+  mutate(data = ymd(glue("{year}-{month}-1"))) |>
+  mutate(ano = year) |>
+  mutate(mes = month) |>
+  select(cod_ibge, data, ano, mes, umidade_rel)
 
-ws <- open_dataset(
-  sources = c(
-    zen_file(18390794, "wind_speed_mean_mean_1950_2022.parquet"),
-    zen_file(18390794, "wind_speed_mean_mean_2023.parquet"),
-    zen_file(18390794, "wind_speed_mean_mean_2024.parquet"),
-    zen_file(18390794, "wind_speed_mean_mean_2025.parquet")
-  )
-) |>
-  filter(name == "wind_speed_mean_mean") |>
-  select(-name) |>
-  arrange(code_muni, date) |>
-  mutate(
-    year = year(date),
-    month = month(date)
+inner_join(temp_max, temp_min) |>
+  inner_join(temp_mean) |>
+  inner_join(rh) |>
+  inner_join(prec) |>
+  select(
+    cod_ibge,
+    data,
+    ano,
+    mes,
+    temp_media,
+    temp_max,
+    temp_min,
+    precip_mm,
+    umidade_rel
   ) |>
-  collect() |>
-  group_by(code_muni, year, month) |>
-  summarise(ws = round(mean(value, na.rm = TRUE), 2))
+  write_csv("indicadores_clima.csv")
+
+zip(zipfile = "indicadores_clima.csv.zip", files = "indicadores_clima.csv")
+unlink("indicadores_clima.csv")
+
+# Normais climatológicas
 
 temp_max_normal <- open_dataset(
   sources = c(
@@ -152,10 +191,11 @@ temp_max_normal <- open_dataset(
   summarise_normal(
     date_var = date,
     value_var = value,
-    year_start = 1961,
-    year_end = 1990
+    year_start = 1981,
+    year_end = 2010
   ) |>
-  ungroup()
+  ungroup() |>
+  select(cod_ibge = code_muni, mes = month, temp_max_normal = normal_mean)
 
 temp_min_normal <- open_dataset(
   sources = c(
@@ -177,10 +217,37 @@ temp_min_normal <- open_dataset(
   summarise_normal(
     date_var = date,
     value_var = value,
-    year_start = 1961,
-    year_end = 1990
+    year_start = 1981,
+    year_end = 2010
   ) |>
-  ungroup()
+  ungroup() |>
+  select(cod_ibge = code_muni, mes = month, temp_min_normal = normal_mean)
+
+temp_mean_normal <- open_dataset(
+  sources = c(
+    zen_file(10036212, "2m_temperature_mean.parquet"),
+    zen_file(10947952, "2m_temperature_mean.parquet"),
+    zen_file(15748125, "2m_temperature_mean.parquet")
+  )
+) |>
+  filter(name == "2m_temperature_mean_mean") |>
+  mutate(value = value - 273.15) |>
+  select(-name) |>
+  arrange(code_muni, date) |>
+  mutate(
+    year = year(date),
+    month = month(date)
+  ) |>
+  collect() |>
+  group_by(code_muni, month) |>
+  summarise_normal(
+    date_var = date,
+    value_var = value,
+    year_start = 1981,
+    year_end = 2010
+  ) |>
+  ungroup() |>
+  select(cod_ibge = code_muni, mes = month, temp_media_normal = normal_mean)
 
 prec_normal <- open_dataset(
   sources = c(
@@ -202,85 +269,34 @@ prec_normal <- open_dataset(
   summarise_normal(
     date_var = date,
     value_var = value,
-    year_start = 1961,
-    year_end = 1990
+    year_start = 1981,
+    year_end = 2010
   ) |>
-  ungroup()
+  ungroup() |>
+  select(cod_ibge = code_muni, mes = month, precip_normal = normal_mean)
 
-rh_normal <- inner_join(temp_mean_2, dew_point_2) |>
+rh_normal <- open_dataset(
+  sources = c(
+    zen_file(18758355, "rh_mean_mean_1950_2022.parquet"),
+    zen_file(18758355, "rh_mean_mean_2023.parquet"),
+    zen_file(18758355, "rh_mean_mean_2024.parquet"),
+    zen_file(18758355, "rh_mean_mean_2025.parquet")
+  )
+) |>
+  filter(name == "rh_mean_mean") |>
+  select(-name) |>
+  arrange(code_muni, date) |>
   mutate(
-    e_actual = exp((17.625 * dew_point) / (243.04 + dew_point)),
-    e_saturation = exp((17.625 * temp_mean) / (243.04 + temp_mean)),
-    rh = round(100 * (e_actual / e_saturation), 2)
+    year = year(date),
+    month = month(date)
   ) |>
-  select(code_muni, date, month, rh) |>
+  collect() |>
   group_by(code_muni, month) |>
   summarise_normal(
     date_var = date,
-    value_var = rh,
-    year_start = 1961,
-    year_end = 1990
+    value_var = value,
+    year_start = 1981,
+    year_end = 2010
   ) |>
-  ungroup()
-
-# Write to database
-dbWriteTable(
-  conn = con,
-  name = "temp_max",
-  value = temp_max,
-  overwrite = TRUE
-)
-dbWriteTable(
-  conn = con,
-  name = "temp_min",
-  value = temp_min,
-  overwrite = TRUE
-)
-dbWriteTable(
-  conn = con,
-  name = "prec",
-  value = prec,
-  overwrite = TRUE
-)
-dbWriteTable(
-  conn = con,
-  name = "rh",
-  value = rh,
-  overwrite = TRUE
-)
-dbWriteTable(
-  conn = con,
-  name = "ws",
-  value = rh,
-  overwrite = TRUE
-)
-dbWriteTable(
-  conn = con,
-  name = "temp_max_normal",
-  value = temp_max_normal,
-  overwrite = TRUE
-)
-dbWriteTable(
-  conn = con,
-  name = "temp_min_normal",
-  value = temp_min_normal,
-  overwrite = TRUE
-)
-dbWriteTable(
-  conn = con,
-  name = "prec_normal",
-  value = prec_normal,
-  overwrite = TRUE
-)
-dbWriteTable(
-  conn = con,
-  name = "rh_normal",
-  value = rh_normal,
-  overwrite = TRUE
-)
-
-# List tables
-dbListTables(conn = con)
-
-# Database disconnect
-dbDisconnect(conn = con)
+  ungroup() |>
+  select(cod_ibge = code_muni, mes = month, precip_normal = normal_mean)
