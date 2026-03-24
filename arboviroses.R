@@ -9,29 +9,24 @@ library(zip)
 
 # Dados Vanderlei
 res <- read_delim(
-  file = "dados_brutos/arboviroses/tb_adaptação 1/tb_adaptação.csv",
+  file = "dados_brutos/arboviroses/tb_adaptação_veri.csv",
   col_names = c("ind", "codmun", "anos", "mes", "valor"),
   col_types = "ciiid",
   locale = locale(decimal_mark = ".", grouping_mark = ",")
 )
 
 
-res |>
-  dplyr::summarise(n = dplyr::n(), .by = c(codmun, anos, mes, ind)) |>
-  dplyr::filter(n > 1L)
-
-
 res2 <- res |>
   mutate(
     ind = recode_values(
       x = ind,
-      "Dengue total" ~ "inc_dengue",
-      "Zika" ~ "inc_zika",
-      "Chikungunya" ~ "inc_chikungunya",
-      "Leptospirose" ~ "inc_leptospirose",
-      "lta" ~ "lta",
-      "mal_vivax" ~ "inc_malaria_vivax",
-      "mal_falciparum" ~ "inc_malaria_falciparum"
+      "dengue total" ~ "inc_dengue",
+      "zika" ~ "inc_zika",
+      "chikungunya" ~ "inc_chikungunya",
+      "leptospirose" ~ "inc_leptospirose",
+      "lta" ~ "inc_leishmaniose",
+      "malaria_vivax" ~ "inc_malaria_vivax",
+      "malaria_falci" ~ "inc_malaria_falciparum"
     ),
     valor = round(valor, 2)
   ) |>
@@ -39,4 +34,14 @@ res2 <- res |>
     id_cols = c(codmun, anos, mes),
     names_from = ind,
     values_from = valor
-  )
+  ) |>
+  rename(cod_ibge = codmun)
+
+res2 |>
+  write_csv("arboviroses.csv")
+
+zip(
+  zipfile = "arboviroses.csv.zip",
+  files = "arboviroses.csv"
+)
+unlink("arboviroses.csv")
